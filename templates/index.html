@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VIP Multi-Convo FB Loader</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.5.2/socket.io.min.js"></script>
+    <style>
+        body { background-color: #0f172a; color: #f8fafc; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .card { background-color: #1e293b; border: 1px solid #334155; }
+        .form-control { background-color: #0f172a; border-color: #475569; color: #fff; }
+        .form-control:focus { background-color: #0f172a; color: #fff; border-color: #3b82f6; box-shadow: none; }
+        #log-box { background-color: #020617; border: 1px solid #334155; height: 350px; overflow-y: scroll; font-family: monospace; font-size: 13px; padding: 10px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+<div class="container my-5">
+    <div class="text-center mb-4">
+        <h1 class="fw-bold text-primary">🔥 VIP MULTI-CONVO FB LOADER 🔥</h1>
+        <p class="text-muted">Non-stop Multi-Cookie & Multi-Convo Web Tool for Render</p>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card p-4 shadow-lg rounded-4">
+                <h4 class="mb-3 text-info">⚙️ Configuration Panel</h4>
+                <div class="mb-3">
+                    <label class="form-label">1. FB Cookies (Multi-Cookie Supported - 1 per line)</label>
+                    <textarea class="form-control" id="cookies" rows="3" placeholder="datr=...; c_user=...;
+datr=...; c_user=...;"></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">2. Convo UIDs (Comma separated)</label>
+                    <input type="text" class="form-control" id="convos" placeholder="100001234567, 100009876543">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">3. Prefix / Hater Name (Optional)</label>
+                    <input type="text" class="form-control" id="prefix" placeholder="[VIP] Name">
+                </div>
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label">4. Timer / Delay (Seconds)</label>
+                        <input type="number" class="form-control" id="delay" value="5" min="1">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">5. Text Messages (No file needed, 1 per line)</label>
+                    <textarea class="form-control" id="messages" rows="4" placeholder="Hello
+How are you?
+Spam text here"></textarea>
+                </div>
+                <div class="d-flex gap-2">
+                    <button id="startBtn" class="btn btn-success w-50 fw-bold py-2">🚀 RUN LOADER</button>
+                    <button id="stopBtn" class="btn btn-danger w-50 fw-bold py-2" disabled>🛑 STOP LOADER</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card p-4 shadow-lg rounded-4 h-100 d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="text-warning m-0">📡 Live Convo Status & Logs</h4>
+                    <div>
+                        <span class="badge bg-secondary" id="statusBadge">Status: STOPPED</span>
+                        <span class="badge bg-primary" id="uptimeBadge">Uptime: 00:00:00</span>
+                    </div>
+                </div>
+                <div id="log-box" class="flex-grow-1 mb-3">
+                    <div class="text-muted">[System Ready. Enter details and click Run...]</div>
+                </div>
+                <button class="btn btn-outline-light btn-sm" onclick="document.getElementById('log-box').innerHTML=''">Clear Logs</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const socket = io();
+
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const statusBadge = document.getElementById('statusBadge');
+    const uptimeBadge = document.getElementById('uptimeBadge');
+    const logBox = document.getElementById('log-box');
+
+    startBtn.onclick = function() {
+        const cookies = document.getElementById('cookies').value;
+        const convos = document.getElementById('convos').value;
+        const prefix = document.getElementById('prefix').value;
+        const delay = document.getElementById('delay').value;
+        const messages = document.getElementById('messages').value;
+
+        if(!cookies || !convos || !messages) {
+            alert("Please fill Cookies, Convos, and Messages fields!");
+            return;
+        }
+
+        socket.emit('start_loader', {cookies, convos, prefix, delay, messages});
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        startBtn.innerText = "RUNNING...";
+    };
+
+    stopBtn.onclick = function() {
+        socket.emit('stop_loader');
+        startBtn.disabled = false;
+        stopBtn.disabled = true;
+        startBtn.innerText = "🚀 RUN LOADER";
+    };
+
+    socket.on('log_message', function(msg) {
+        logBox.innerHTML += `<div>${msg.data}</div>`;
+        logBox.scrollTop = logBox.scrollHeight;
+    });
+
+    // Fetch status and uptime every second
+    setInterval(() => {
+        socket.emit('get_status');
+    }, 1000);
+
+    socket.on('status_response', function(data) {
+        if(data.status === 'Running') {
+            statusBadge.className = "badge bg-success";
+            statusBadge.innerText = "Status: RUNNING";
+            uptimeBadge.innerText = "Uptime: " + data.uptime;
+        } else {
+            statusBadge.className = "badge bg-secondary";
+            statusBadge.innerText = "Status: STOPPED";
+            startBtn.disabled = false;
+            startBtn.innerText = "🚀 RUN LOADER";
+        }
+    });
+</script>
+</body>
+</html>
